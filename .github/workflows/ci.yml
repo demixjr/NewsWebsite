@@ -154,7 +154,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             if (!pr) {
-              core.setFailed("Это не Pull Request");
+              core.setFailed("Це не Pull Request");
               return;
             }
             const { data: reviews } = await github.rest.pulls.listReviews({
