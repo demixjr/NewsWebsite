@@ -1,0 +1,75 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, review_requested, submitted]
+    branches:
+      - develop
+      
+permissions:
+  contents: read
+  pull-requests: write
+  
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Restore dependencies
+        run: dotnet restore NewsWebsite.sln
+        
+      - name: Build
+        run: dotnet build NewsWebsite.sln --no-restore --configuration Release
+        
+      - name: Run tests
+        run: dotnet test NewsWebsite.sln --no-build --verbosity normal --logger "trx;LogFileName=report.trx" --configuration Release
+
+  analysis:
+    name: Static Analysis / Metrics
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  
+
+  review-check:
+    name: Code Review Check for develop
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+        
+      - name: Verify approved code review
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} 
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setFailed("Это не Pull Request");
+              return;
+            }
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            const approved = reviews.some(r => r.state === 'APPROVED');
+            if (!approved) {
+              core.setFailed("Код-рев'ю не схвалено");
+            }
