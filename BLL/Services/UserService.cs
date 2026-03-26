@@ -49,6 +49,23 @@ namespace BLL.Services
 
             return user == null ? null : _mapper.Map<UserDTO>(user);
         }
+        public async Task<bool> UpdateUser(UserDTO userDTO)
+        {
+            var user = await _repository.Find(u => u.Username == userDTO.Username);
+            if (user == null)
+                throw new Exception("Користувача не знайдено");
+
+            if (!string.IsNullOrEmpty(userDTO.Username))
+                user.Username = userDTO.Username;
+
+            if (!string.IsNullOrEmpty(userDTO.Password))
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(userDTO.Password);
+
+            await _repository.Update(user);
+            await _repository.SaveChanges();
+
+            return true;
+        }
 
         public async Task<bool> DeleteUser(UserDTO userDTO)
         {
