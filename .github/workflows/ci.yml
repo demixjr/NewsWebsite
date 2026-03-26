@@ -136,7 +136,55 @@ jobs:
             .sonarqube/out/
             TestResults/
           retention-days: 30
+
+      - name: Install reviewdog
+        run: |
+          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b /usr/local/bin
+          reviewdog -version
           
+      - name: Restore
+        run: dotnet restore NewsWebsite.sln
+
+      - name: Run analyzers (Reviewdog)
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet format NewsWebsite.sln analyzers --verify-no-changes --no-restore > analyzers-raw.txt 2>&1 || true
+          sed "s|$(pwd)/||g" analyzers-raw.txt > analyzers-clean.txt
+      
+          cat analyzers-clean.txt | reviewdog \
+            -efm="%f(%l,%c): %t %m" \
+            -efm="%f(%l,%c): %m" \
+            -name="dotnet-analyzers" \
+            -reporter="github-pr-review" \
+            -filter-mode="added" \
+            -level="error"
+          
+      - name: Run formatter (Reviewdog)
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet format NewsWebsite.sln style --verify-no-changes --no-restore > format-raw.txt 2>&1 || true
+          sed "s|$(pwd)/||g" format-raw.txt > format-clean.txt
+      
+          cat format-clean.txt | reviewdog \
+            -efm="%f(%l,%c): %t %m" \
+            -efm="%f(%l,%c): %m" \
+            -name="dotnet-format" \
+            -reporter="github-pr-review" \
+            -filter-mode="added" \
+            -level="info"
+
+      - name: Upload reviewdog logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reviewdog-logs
+          path: |
+            debug-raw.txt
+            debug-clean.txt
+          retention-days: 30
+      
   review-check:
     name: Code Review Check for develop
     runs-on: ubuntu-latest
