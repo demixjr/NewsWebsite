@@ -43,6 +43,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  
+      - name: Generate develop log
+        run: |
+          git fetch origin develop
+          git log origin/develop --oneline --graph > develop_changes.txt
+      
+          echo "=== FILE CHECK ==="
+          ls -la develop_changes.txt
+          echo "=== CONTENT ==="
+          cat develop_changes.txt
+      
+      - name: Upload develop changes artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: develop-changes
+          path: develop_changes.txt
 
       - name: Count lines of code with Cloc
         run: |
