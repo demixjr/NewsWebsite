@@ -181,8 +181,8 @@ jobs:
         with:
           name: reviewdog-logs
           path: |
-            debug-raw.txt
-            debug-clean.txt
+            analyzers-raw.txt
+            format-raw.txt
           retention-days: 30
       
   review-check:
