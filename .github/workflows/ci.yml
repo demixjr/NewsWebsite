@@ -44,6 +44,99 @@ jobs:
         with:
           fetch-depth: 0  
 
+      - name: Count lines of code with Cloc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cloc
+          cloc . > cloc-report.txt
+          cat cloc-report.txt
+
+      - name: Upload CLOC report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloc-report
+          path: cloc-report.txt
+          retention-days: 30
+
+          
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+        
+      - name: Start SonarQube
+        run: |
+          docker run -d \
+            --name sonarqube \
+            -p 9000:9000 \
+            sonarqube:latest
+          echo "Waiting for SonarQube to start..."
+          until curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"'; do
+            sleep 5
+          done
+          echo "SonarQube is up!"
+
+      - name: Setup SonarQube project and token
+        run: |
+          # Change default admin password
+          curl -u admin:admin -X POST \
+            "http://localhost:9000/api/users/change_password?login=admin&previousPassword=admin&password=Admin123456!"
+          
+          # Create project
+          curl -u admin:Admin123456! -X POST \
+            "http://localhost:9000/api/projects/create?project=NewsWebsite&name=NewsWebsite"
+          
+          # Generate token
+          TOKEN=$(curl -u admin:Admin123456! -X POST \
+            "http://localhost:9000/api/user_tokens/generate?name=ci-token" \
+            | jq -r '.token')
+          echo "SONAR_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Install SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Run SonarQube analysis
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          
+           # Begin SonarQube analysis
+          dotnet sonarscanner begin \
+            /k:"NewsWebsite" \
+            /n:"NewsWebsite" \
+            /d:sonar.host.url="http://localhost:9000" \
+            /d:sonar.login="$SONAR_TOKEN" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.scanner.skipJreProvisioning=true \
+            /d:sonar.sourceEncoding="UTF-8" 
+          
+          # Build the project
+          dotnet build NewsWebsite.sln --no-incremental --configuration Release
+          
+          # Run tests with coverage
+          dotnet test NewsWebsite.sln \
+            --no-build \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --settings coverlet.runsettings \
+            --verbosity normal
+          
+          # End SonarQube analysis
+          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
+          
+      - name: Upload SonarQube full logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonarqube-full-logs
+          path: |
+            .sonarqube/out/
+            TestResults/
+          retention-days: 30
+          
   review-check:
     name: Code Review Check for develop
     runs-on: ubuntu-latest
