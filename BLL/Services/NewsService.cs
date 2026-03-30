@@ -34,7 +34,7 @@ namespace BLL.Services
         {
             var news = await _repository.Find(n => n.Id == newsDTO.Id);
             if (news == null)
-                throw new Exception("Новину не знайдено");
+                throw new KeyNotFoundException("Новину не знайдено");
 
             news.Title = newsDTO.Title;
             news.Description = newsDTO.Description;
@@ -114,6 +114,11 @@ namespace BLL.Services
                 .ToListAsync();
 
             return _mapper.Map<List<NewsDTO>>(news);
+        }
+
+        public async Task<int> GetTotalCount()
+        {
+            return await _repository.GetAll().CountAsync();
         }
     }
 }

@@ -17,16 +17,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup .NET
+      - name: Setup .NET Core
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore NewsWebsite.sln
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build NewsWebsite.sln --no-restore
 
       - name: Run unit tests
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test NewsWebsite.sln --no-build --verbosity normal

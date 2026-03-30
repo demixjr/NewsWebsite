@@ -8,5 +8,6 @@ namespace BLL.Interfaces
         Task<UserDTO?> Authenticate(string username, string password);
         Task<UserDTO?> FindUserByUsername(string? username);
         Task<bool> DeleteUser(UserDTO userDTO);
+        Task<UserDTO?> ChangePassword(UserDTO userDTO, string newPassword);
     }
 }

@@ -150,11 +150,11 @@ namespace Tests.BLL.Tests
         }
 
         [Fact]
-        public async Task EditNews_NonExistentNews_ThrowsException()
+        public async Task EditNews_NonExistentNews_ThrowsKeyNotFoundException()
         {
             // Arrange
-            var newsDTO = new NewsDTO 
-            { 
+            var newsDTO = new NewsDTO
+            {
                 Id = 999,
                 Title = "Новина",
                 Description = "Опис"
@@ -164,7 +164,7 @@ namespace Tests.BLL.Tests
                 .ReturnsAsync((News?)null);
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<Exception>(
+            var exception = await Assert.ThrowsAsync<KeyNotFoundException>(
                 () => _newsService.EditNews(newsDTO)
             );
 

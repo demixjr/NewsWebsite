@@ -13,5 +13,7 @@ namespace BLL.Interfaces
         Task<List<NewsDTO>> GetByCategory(int categoryId);
         Task<List<NewsDTO>> GetSortedByDate(bool descending = true, int page = 1, int pageSize = 20);
         Task<List<NewsDTO>> GetPopular(int minViews);
+
+        Task<int> GetTotalCount();
     }
 }

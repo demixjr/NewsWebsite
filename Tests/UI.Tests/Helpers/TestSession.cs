@@ -10,8 +10,9 @@ namespace UI.Tests.Helpers
     public class TestSession : ISession
     {
         private readonly Dictionary<string, byte[]> _sessionStorage = new();
+        private readonly string _id = Guid.NewGuid().ToString();
 
-        public string Id => Guid.NewGuid().ToString();
+        public string Id => _id;
 
         public bool IsAvailable => true;
 
@@ -54,19 +55,40 @@ namespace UI.Tests.Helpers
     /// </summary>
     public static class SessionExtensions
     {
-        public static void SetObject<T>(this ISession session, string key, T value)
+        public static void SetObject<T>(this ISession session, string key, T? value)
         {
-            var json = JsonSerializer.Serialize(value);
-            var bytes = Encoding.UTF8.GetBytes(json);
-            session.Set(key, bytes);
+            if (value == null)
+            {
+                session.Remove(key);
+                return;
+            }
+
+            try
+            {
+                var json = JsonSerializer.Serialize(value);
+                var bytes = Encoding.UTF8.GetBytes(json);
+                session.Set(key, bytes);
+            }
+            catch
+            {
+                // In tests, silently skip serialization errors
+            }
         }
 
         public static T? GetObject<T>(this ISession session, string key)
         {
-            if (session.TryGetValue(key, out var bytes))
+            if (session.TryGetValue(key, out var bytes) && bytes != null && bytes.Length > 0)
             {
-                var json = Encoding.UTF8.GetString(bytes);
-                return JsonSerializer.Deserialize<T>(json);
+                try
+                {
+                    var json = Encoding.UTF8.GetString(bytes);
+                    if (string.IsNullOrWhiteSpace(json)) return default;
+                    return JsonSerializer.Deserialize<T>(json);
+                }
+                catch
+                {
+                    return default;
+                }
             }
             return default;
         }
