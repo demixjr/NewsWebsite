@@ -79,5 +79,16 @@ namespace BLL.Services
 
             return true;
         }
+
+        public async Task<UserDTO?> ChangePassword(UserDTO userDTO, string newPassword)
+        {
+            var user = await _repository.Find(u => u.Username == userDTO.Username);
+            if (user == null)
+                throw new Exception("Неможливо змінити пароль користувача, оскільки його не знайдено в базі даних");
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            await _repository.Update(user);
+            await _repository.SaveChanges();
+            return _mapper.Map<UserDTO>(user);
+        }
     }
 }
